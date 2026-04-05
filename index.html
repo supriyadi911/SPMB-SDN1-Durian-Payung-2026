@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPMB - SDN 1 Durian Payung</title>
+    <!-- Tailwind CSS (Diasumsikan tersedia via environment) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Transisi halus antar halaman */
+        .page-transition {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .hidden-page {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+        }
+        .active-page {
+            opacity: 1;
+            transform: translateY(0);
+            position: relative;
+            visibility: visible;
+        }
+        /* Loader Spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">SPMB Internal</h1>
+                <p class="text-sm text-blue-100">SDN 1 Durian Payung</p>
+            </div>
+            <!-- Tombol Beranda (Hanya muncul saat di form) -->
+            <button id="btn-home" onclick="showPage('dashboard')" class="hidden bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Beranda
+            </button>
+        </div>
+    </header>
+
+    <!-- Notifikasi Toast -->
+    <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-md shadow-lg transition-all duration-300 opacity-0 invisible z-50 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="toast-message">Data berhasil dikirim!</span>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-6 relative">
+        
+        <!-- ================= Halaman Dashboard ================= -->
+        <section id="page-dashboard" class="page-transition active-page w-full">
+            <div class="text-center mb-8 mt-4">
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-800">Selamat Datang Calon Siswa!</h2>
+                <p class="text-slate-500 mt-2">Sistem Penerimaan Murid Baru Tahun Ajaran 2026/2027</p>
+            </div>
+
+            <!-- Kartu Statistik -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <!-- Total -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div class="bg-blue-100 p-4 rounded-full text-blue-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Total Pendaftar</p>
+                        <h3 class="text-3xl font-bold text-slate-800" id="stat-total">...</h3>
+                    </div>
+                </div>
+                <!-- Laki-laki -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div class="bg-indigo-100 p-4 rounded-full text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Laki-laki</p>
+                        <h3 class="text-3xl font-bold text-slate-800" id="stat-laki">...</h3>
+                    </div>
+                </div>
+                <!-- Perempuan -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div class="bg-pink-100 p-4 rounded-full text-pink-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Perempuan</p>
+                        <h3 class="text-3xl font-bold text-slate-800" id="stat-perempuan">...</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Daftar -->
+            <div class="text-center bg-white p-8 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-xl font-semibold mb-4">Mulai Pendaftaran Anda</h3>
+                <p class="text-slate-500 mb-6 max-w-lg mx-auto">Silakan lengkapi formulir pendaftaran dengan data yang valid. Proses cepat, mudah, dan langsung terhubung dengan admin sekolah.</p>
+                <button onclick="openForm('add')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:-translate-y-1 w-full md:w-auto">
+                    Daftar Sekarang
+                </button>
+            </div>
+
+            <!-- Tabel Data Pendaftar -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mt-8 overflow-hidden">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                    <div>
+                        <h3 class="text-xl font-semibold text-slate-800">Daftar Pendaftar</h3>
+                        <p class="text-sm text-slate-500">Data lengkap calon siswa yang telah mendaftar.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                        <button onclick="refreshData(this)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            Refresh
+                        </button>
+                        <button id="btn-bulk-delete" onclick="bulkDelete()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors hidden flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Hapus Terpilih
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto -mx-6 px-6">
+                    <table class="w-full text-sm text-left text-slate-600 whitespace-nowrap">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-y border-slate-200">
+                            <tr>
+                                <th scope="col" class="p-4 w-4">
+                                    <input type="checkbox" id="checkbox-all" onchange="toggleAllCheckboxes()" class="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
+                                </th>
+                                <th scope="col" class="px-4 py-3">No</th>
+                                <th scope="col" class="px-4 py-3">Nama Lengkap</th>
+                                <th scope="col" class="px-4 py-3">Tanggal Lahir</th>
+                                <th scope="col" class="px-4 py-3">Usia (1 Juli 2026)</th>
+                                <th scope="col" class="px-4 py-3">L/P</th>
+                                <th scope="col" class="px-4 py-3">Asal Sekolah</th>
+                                <th scope="col" class="px-4 py-3">No HP (Ortu)</th>
+                                <th scope="col" class="px-4 py-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="9" class="px-4 py-8 text-center text-slate-500">
+                                    <div class="flex justify-center items-center gap-2">
+                                        <div class="spinner border-blue-500 border-t-transparent w-5 h-5"></div>
+                                        Memuat data...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= Halaman Form Pendaftaran ================= -->
+        <section id="page-form" class="page-transition hidden-page w-full max-w-2xl mx-auto">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-100">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 id="form-title" class="text-2xl font-bold text-slate-800">Formulir Pendaftaran</h2>
+                    <p class="text-sm text-slate-500 mt-1">Lengkapi data di bawah ini dengan benar (* wajib diisi).</p>
+                </div>
+
+                <form id="form-pendaftaran" onsubmit="submitData(event)">
+                    <!-- Hidden input untuk mode Edit -->
+                    <input type="hidden" id="action_type" name="action" value="create">
+                    <input type="hidden" id="row_id" name="row_id" value="">
+                    
+                    <div class="space-y-5">
+                        
+                        <!-- Nama Lengkap -->
+                        <div>
+                            <label for="nama" class="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap Siswa *</label>
+                            <input type="text" id="nama" name="nama" required placeholder="Cth: Budi Santoso"
+                                class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                        </div>
+
+                        <!-- Tempat, Tanggal Lahir -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="tempat_lahir" class="block text-sm font-medium text-slate-700 mb-1">Tempat Lahir *</label>
+                                <input type="text" id="tempat_lahir" name="tempat_lahir" required placeholder="Cth: Bandar Lampung"
+                                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label for="tanggal_lahir" class="block text-sm font-medium text-slate-700 mb-1">Tanggal Lahir *</label>
+                                <input type="date" id="tanggal_lahir" name="tanggal_lahir" required onchange="checkAge()"
+                                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700">
+                                <p id="age-warning" class="text-xs text-orange-600 mt-1 hidden font-medium flex items-start gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <span>Peringatan: Usia kurang dari 6 tahun pada 1 Juli 2026.</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Jenis Kelamin -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Jenis Kelamin *</label>
+                            <div class="flex gap-4">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="jenis_kelamin" value="Laki-laki" required class="form-radio text-blue-600 h-4 w-4">
+                                    <span class="ml-2 text-slate-700">Laki-laki</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="jenis_kelamin" value="Perempuan" required class="form-radio text-pink-600 h-4 w-4">
+                                    <span class="ml-2 text-slate-700">Perempuan</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Alamat -->
+                        <div>
+                            <label for="alamat" class="block text-sm font-medium text-slate-700 mb-1">Alamat Lengkap *</label>
+                            <textarea id="alamat" name="alamat" rows="3" required placeholder="Nama jalan, RT/RW, Kelurahan..."
+                                class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"></textarea>
+                        </div>
+
+                        <!-- Nama Orang Tua -->
+                        <div>
+                            <label for="orang_tua" class="block text-sm font-medium text-slate-700 mb-1">Nama Orang Tua / Wali *</label>
+                            <input type="text" id="orang_tua" name="orang_tua" required placeholder="Cth: Bapak Sutrisno"
+                                class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                        </div>
+
+                        <!-- No HP (WA) -->
+                        <div>
+                            <label for="no_hp" class="block text-sm font-medium text-slate-700 mb-1">Nomor HP Orang Tua (WA Aktif) *</label>
+                            <input type="tel" id="no_hp" name="no_hp" required placeholder="Cth: 081234567890" pattern="[0-9]{10,14}" title="Masukkan angka saja, 10-14 digit"
+                                class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            <p class="text-xs text-slate-500 mt-1">Pastikan nomor aktif untuk menerima notifikasi.</p>
+                        </div>
+
+                        <!-- Asal Sekolah -->
+                        <div>
+                            <label for="asal_sekolah" class="block text-sm font-medium text-slate-700 mb-1">Asal Sekolah (TK/PAUD)</label>
+                            <input type="text" id="asal_sekolah" name="asal_sekolah" placeholder="Boleh dikosongkan jika tidak ada"
+                                class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                        </div>
+
+                    </div>
+
+                    <!-- Tombol Submit -->
+                    <div class="mt-8 pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button type="button" onclick="showPage('dashboard')" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" id="btn-submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow-sm transition-all flex items-center gap-2">
+                            <span id="btn-text">Kirim Data Pendaftaran</span>
+                            <div id="btn-loader" class="spinner hidden"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
+        <div class="max-w-4xl mx-auto px-4 text-center text-sm text-slate-500">
+            &copy; 2026 SDN 1 Durian Payung. Sistem Penerimaan Murid Baru.
+        </div>
+    </footer>
+
+    <!-- Script JavaScript -->
+    <script>
+        // ==========================================
+        // KONFIGURASI PENTING
+        // ==========================================
+        // Ganti URL ini dengan Web App URL dari Google Apps Script Anda nanti
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3WTXQEU4RGovkopqjGvgKVl76bbq19QIj5JOmgptIoOS9oKmIPmDJfxiKZtCpihzJeA/exec"; 
+
+        // State Simulasi & Penyimpanan Data Lokal
+        let appData = [];
+        let mockData = { 
+            total: 2, laki: 1, perempuan: 1,
+            data: [
+                { row: 2, nama: "Budi Santoso", ttl: "Bandar Lampung, 2020-01-01", jenis_kelamin: "Laki-laki", alamat: "Jl. Raya", orang_tua: "Agus", no_hp: "08123456789", asal_sekolah: "TK Pertiwi" },
+                { row: 3, nama: "Siti Aminah", ttl: "Jakarta, 2020-05-10", jenis_kelamin: "Perempuan", alamat: "Jl. Mawar", orang_tua: "Budi", no_hp: "08987654321", asal_sekolah: "PAUD Kasih" }
+            ]
+        };
+
+        // ==========================================
+        // FUNGSI NAVIGASI HALAMAN & FORM
+        // ==========================================
+        function showPage(pageId) {
+            const dashboard = document.getElementById('page-dashboard');
+            const form = document.getElementById('page-form');
+            const btnHome = document.getElementById('btn-home');
+
+            if (pageId === 'form') {
+                dashboard.classList.replace('active-page', 'hidden-page');
+                form.classList.replace('hidden-page', 'active-page');
+                btnHome.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                form.classList.replace('active-page', 'hidden-page');
+                dashboard.classList.replace('hidden-page', 'active-page');
+                btnHome.classList.add('hidden');
+                document.getElementById('form-pendaftaran').reset(); // Reset form saat kembali
+            }
+        }
+
+        function openForm(mode, rowId = null) {
+            const form = document.getElementById('form-pendaftaran');
+            const title = document.getElementById('form-title');
+            const actionInput = document.getElementById('action_type');
+            const rowInput = document.getElementById('row_id');
+
+            form.reset();
+            document.getElementById('age-warning').classList.add('hidden'); // Reset warning
+
+            if (mode === 'add') {
+                title.innerText = "Formulir Pendaftaran Baru";
+                actionInput.value = "create";
+                rowInput.value = "";
+            } else if (mode === 'edit') {
+                title.innerText = "Edit Data Pendaftar";
+                actionInput.value = "update";
+                rowInput.value = rowId;
+
+                // Cari data berdasarkan rowId
+                const student = appData.find(s => s.row == rowId);
+                if (student) {
+                    document.getElementById('nama').value = student.nama;
+                    
+                    // Pisahkan TTL jika formatnya "Tempat, YYYY-MM-DD"
+                    const ttlParts = student.ttl.split(', ');
+                    if(ttlParts.length > 1) {
+                        document.getElementById('tempat_lahir').value = ttlParts[0];
+                        document.getElementById('tanggal_lahir').value = ttlParts[1];
+                        checkAge(); // Panggil pengecekan usia saat edit form
+                    } else {
+                        document.getElementById('tempat_lahir').value = student.ttl;
+                        document.getElementById('tanggal_lahir').value = ""; // Pastikan kosong jika format lama
+                        document.getElementById('age-warning').classList.add('hidden');
+                    }
+
+                    // Set radio button
+                    if (student.jenis_kelamin === 'Laki-laki') {
+                        document.querySelector('input[name="jenis_kelamin"][value="Laki-laki"]').checked = true;
+                    } else if (student.jenis_kelamin === 'Perempuan') {
+                        document.querySelector('input[name="jenis_kelamin"][value="Perempuan"]').checked = true;
+                    }
+
+                    document.getElementById('alamat').value = student.alamat;
+                    document.getElementById('orang_tua').value = student.orang_tua;
+                    document.getElementById('no_hp').value = student.no_hp;
+                    document.getElementById('asal_sekolah').value = student.asal_sekolah;
+                }
+            }
+            showPage('form');
+        }
+
+        // ==========================================
+        // FUNGSI NOTIFIKASI
+        // ==========================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            
+            if(type === 'error') {
+                toast.classList.replace('bg-green-500', 'bg-red-500');
+            } else {
+                toast.classList.replace('bg-red-500', 'bg-green-500');
+            }
+
+            toastMsg.innerText = message;
+            toast.classList.remove('opacity-0', 'invisible');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'invisible');
+            }, 3000);
+        }
+
+        // ==========================================
+        // FUNGSI CEK USIA
+        // ==========================================
+        function getAgeInfo(dateString) {
+            if (!dateString || dateString === '-') return { text: '-', warning: false };
+            const birthDate = new Date(dateString);
+            if (isNaN(birthDate)) return { text: '-', warning: false };
+
+            const targetDate = new Date('2026-07-01'); // Batas perhitungan
+            let years = targetDate.getFullYear() - birthDate.getFullYear();
+            let months = targetDate.getMonth() - birthDate.getMonth();
+            
+            if (targetDate.getDate() < birthDate.getDate()) {
+                months--;
+            }
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            return { text: `${years} Thn ${months} Bln`, warning: years < 6 };
+        }
+
+        function checkAge() {
+            const inputDate = document.getElementById('tanggal_lahir').value;
+            const warningEl = document.getElementById('age-warning');
+            
+            if (!inputDate) {
+                warningEl.classList.add('hidden');
+                return;
+            }
+
+            const birthDate = new Date(inputDate);
+            const targetDate = new Date('2026-07-01'); // Batas tanggal perhitungan usia
+            
+            let age = targetDate.getFullYear() - birthDate.getFullYear();
+            const monthDiff = targetDate.getMonth() - birthDate.getMonth();
+            
+            // Jika bulan saat ini kurang dari bulan lahir, atau bulan sama tapi tanggal kurang dari tanggal lahir
+            if (monthDiff < 0 || (monthDiff === 0 && targetDate.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            // Tampilkan peringatan jika kurang dari 6 tahun
+            if (age < 6) {
+                warningEl.classList.remove('hidden');
+            } else {
+                warningEl.classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // FUNGSI TARIK DATA (DASHBOARD & TABEL)
+        // ==========================================
+        async function refreshData(btn) {
+            if(btn) {
+                const icon = btn.querySelector('svg');
+                icon.classList.add('animate-spin');
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+            }
+            
+            await fetchStats();
+            
+            if(btn) {
+                const icon = btn.querySelector('svg');
+                icon.classList.remove('animate-spin');
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                showToast("Data berhasil diperbarui!", "success");
+            }
+        }
+
+        async function fetchStats() {
+            const elTotal = document.getElementById('stat-total');
+            const elLaki = document.getElementById('stat-laki');
+            const elPerempuan = document.getElementById('stat-perempuan');
+            const tbody = document.getElementById('table-body');
+
+            if (!SCRIPT_URL) {
+                updateDashboardUI(mockData);
+                return;
+            }
+
+            try {
+                // Tambahkan parameter action=read jika diperlukan oleh GAS baru
+                const response = await fetch(SCRIPT_URL + "?action=read");
+                const result = await response.json();
+                
+                // Cek apakah response berupa format baru { stats: {}, data: [] } 
+                // atau format lama { total, laki, perempuan }
+                if (result.data) {
+                    updateDashboardUI(result);
+                } else {
+                    // Fallback ke format lama, tabel kosong karena API lama tidak kirim daftar siswa
+                    elTotal.innerText = result.total || 0;
+                    elLaki.innerText = result.laki || 0;
+                    elPerempuan.innerText = result.perempuan || 0;
+                    tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-slate-500">Google Apps Script perlu diupdate untuk menampilkan isi tabel.</td></tr>`;
+                }
+
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+                elTotal.innerText = "Error";
+                elLaki.innerText = "-";
+                elPerempuan.innerText = "-";
+                tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-red-500">Gagal memuat data tabel.</td></tr>`;
+            }
+        }
+
+        function updateDashboardUI(result) {
+            document.getElementById('stat-total').innerText = result.total || (result.stats ? result.stats.total : 0);
+            document.getElementById('stat-laki').innerText = result.laki || (result.stats ? result.stats.laki : 0);
+            document.getElementById('stat-perempuan').innerText = result.perempuan || (result.stats ? result.stats.perempuan : 0);
+            
+            appData = result.data || [];
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            document.getElementById('checkbox-all').checked = false;
+            toggleBulkButton();
+
+            if (appData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-slate-500">Belum ada data pendaftar.</td></tr>`;
+                return;
+            }
+
+            appData.forEach((student, index) => {
+                const ttlParts = student.ttl ? student.ttl.split(', ') : ['-'];
+                const tglLahir = ttlParts.length > 1 ? ttlParts[1] : '-';
+                const ageInfo = getAgeInfo(tglLahir);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4 w-4">
+                        <input type="checkbox" value="${student.row}" class="row-checkbox w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer" onchange="toggleBulkButton()">
+                    </td>
+                    <td class="px-4 py-3 font-medium text-slate-800">${index + 1}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800">${student.nama}</td>
+                    <td class="px-4 py-3 text-slate-600">${tglLahir}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${ageInfo.warning ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}">
+                            ${ageInfo.text}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 text-xs rounded-full ${student.jenis_kelamin === 'Laki-laki' ? 'bg-indigo-100 text-indigo-700' : 'bg-pink-100 text-pink-700'}">
+                            ${student.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">${student.asal_sekolah || '-'}</td>
+                    <td class="px-4 py-3">${student.no_hp}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex justify-center items-center gap-2">
+                            <button onclick="openForm('edit', ${student.row})" class="text-blue-500 hover:text-blue-700 transition-colors" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                            <button onclick="deleteData(${student.row})" class="text-red-500 hover:text-red-700 transition-colors" title="Hapus">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ==========================================
+        // FITUR CHECKBOX & BULK DELETE
+        // ==========================================
+        function toggleAllCheckboxes() {
+            const checkAll = document.getElementById('checkbox-all');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkAll.checked);
+            toggleBulkButton();
+        }
+
+        function toggleBulkButton() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const btnBulk = document.getElementById('btn-bulk-delete');
+            const checkAll = document.getElementById('checkbox-all');
+            const totalCheckboxes = document.querySelectorAll('.row-checkbox').length;
+
+            if (checkboxes.length > 0) {
+                btnBulk.classList.remove('hidden');
+            } else {
+                btnBulk.classList.add('hidden');
+            }
+
+            // Atur status checkbox header (check all)
+            if (totalCheckboxes > 0 && checkboxes.length === totalCheckboxes) {
+                checkAll.checked = true;
+                checkAll.indeterminate = false;
+            } else if (checkboxes.length > 0) {
+                checkAll.checked = false;
+                checkAll.indeterminate = true;
+            } else {
+                checkAll.checked = false;
+                checkAll.indeterminate = false;
+            }
+        }
+
+        // ==========================================
+        // FUNGSI KIRIM DATA (CREATE / UPDATE)
+        // ==========================================
+        async function submitData(event) {
+            event.preventDefault(); // Mencegah reload halaman
+
+            const form = document.getElementById('form-pendaftaran');
+            const btnSubmit = document.getElementById('btn-submit');
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            const actionType = document.getElementById('action_type').value; // create atau update
+
+            // Set state loading
+            btnSubmit.disabled = true;
+            btnSubmit.classList.add('opacity-75', 'cursor-not-allowed');
+            btnText.innerText = 'Menyimpan...';
+            btnLoader.classList.remove('hidden');
+
+            // Ambil data form
+            const formData = new FormData(form);
+            const ttl = `${formData.get('tempat_lahir')}, ${formData.get('tanggal_lahir')}`;
+            formData.append('ttl', ttl);
+
+            if (!SCRIPT_URL) {
+                setTimeout(() => {
+                    handleSuccess(formData, form, actionType);
+                    resetButtonState(btnSubmit, btnText, btnLoader);
+                }, 1500);
+                return;
+            }
+
+            try {
+                // Untuk support UPDATE via Google Apps Script (doPost)
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                handleSuccess(formData, form, actionType);
+
+            } catch (error) {
+                console.error("Error saat menyimpan:", error);
+                alert("Terjadi kesalahan koneksi. Silakan coba lagi.");
+            } finally {
+                resetButtonState(btnSubmit, btnText, btnLoader);
+            }
+        }
+
+        function handleSuccess(formData, formElement, actionType) {
+            if (actionType === 'create') {
+                showToast("Data Pendaftaran Berhasil Dikirim!");
+                // Opsi buka WhatsApp (hanya untuk data baru)
+                let rawPhone = formData.get('no_hp');
+                if (rawPhone.startsWith('0')) rawPhone = '62' + rawPhone.substring(1);
+                const namaSiswa = formData.get('nama');
+                const pesanWA = `Halo Bapak/Ibu,\n\nPendaftaran atas nama *${namaSiswa}* telah berhasil kami terima di sistem SDN 1 Durian Payung, kami akan menghubungi kembali untuk kelengkapan data selanjutnya.\n\nTerima kasih sudah mendaftar.`;
+                const waLink = `https://wa.me/${rawPhone}?text=${encodeURIComponent(pesanWA)}`;
+                
+                setTimeout(() => { window.open(waLink, '_blank'); }, 800);
+            } else {
+                showToast("Data Pendaftaran Berhasil Diperbarui!");
+            }
+            
+            formElement.reset();
+            fetchStats(); // Refresh tabel dan statistik
+            setTimeout(() => { showPage('dashboard'); }, 500);
+        }
+
+        function resetButtonState(btn, textEl, loaderEl) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            textEl.innerText = 'Simpan Data Pendaftaran';
+            loaderEl.classList.add('hidden');
+        }
+
+        // ==========================================
+        // FUNGSI HAPUS DATA
+        // ==========================================
+        async function deleteData(rowId) {
+            if(!confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
+
+            // Hapus baris dari tampilan UI secara instan agar terasa cepat (Optimistic Update)
+            appData = appData.filter(student => student.row != rowId);
+            renderTable();
+
+            const formData = new FormData();
+            formData.append("action", "delete");
+            formData.append("row_id", rowId);
+
+            processDelete(formData);
+        }
+
+        async function bulkDelete() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            if(checkboxes.length === 0) return;
+            
+            if(!confirm(`Yakin ingin menghapus ${checkboxes.length} data terpilih?`)) return;
+
+            const rowIdsArray = Array.from(checkboxes).map(cb => cb.value);
+            const rowIds = rowIdsArray.join(',');
+            
+            // Hapus baris-baris terpilih dari tampilan UI secara instan
+            appData = appData.filter(student => !rowIdsArray.includes(student.row.toString()));
+            renderTable();
+
+            const formData = new FormData();
+            formData.append("action", "bulk_delete");
+            formData.append("row_ids", rowIds);
+
+            processDelete(formData);
+        }
+
+        async function processDelete(formData) {
+            showToast("Sedang menghapus data...", "success");
+            
+            if (!SCRIPT_URL) {
+                setTimeout(() => {
+                    showToast("Data berhasil dihapus!");
+                    fetchStats();
+                }, 1000);
+                return;
+            }
+
+            try {
+                // Gunakan mode 'no-cors' agar request POST tidak di-block browser
+                await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: formData,
+                    mode: 'no-cors'
+                });
+                
+                showToast("Data berhasil dihapus!");
+                
+                // Beri jeda 1.5 detik agar Google Sheets selesai menghapus baris sebelum menarik data baru
+                setTimeout(() => {
+                    fetchStats(); 
+                }, 1500);
+
+            } catch (error) {
+                console.error("Gagal menghapus:", error);
+                showToast("Gagal menghapus data. Periksa koneksi.", "error");
+            }
+        }
+
+        // Panggil fetchStats saat pertama kali halaman dimuat
+        window.onload = fetchStats;
+
+    </script>
+</body>
+</html>
